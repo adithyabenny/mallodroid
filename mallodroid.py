@@ -35,6 +35,10 @@ import pprint
 import datetime
 import argparse
 
+dex_conditional_memonics = [ "if-eq", "if-ne", "if-lt", "if-ge", "if-gt", "if-le", "if-eqz", "if-nez", "if-ltz", "if-gez", "if-gtz", "if-lez"]
+
+dex_method_call_memonics = [ "invoke-virtual", "invoke-super", "invoke-direct", "invoke-static", "invoke-interface" ]
+
 def _get_java_code(_class, _vmx):
 	try:
 		_ms = decompile.DvClass(_class, _vmx)
@@ -89,6 +93,26 @@ def _returns_void(_method):
 		return _instructions[0].get_name() == "return-void"
 	return False
 
+def _contains_conditional_syntax(_method):
+	_instructions = _get_method_instructions(_method)
+	if len(_instructions) <= 1 :
+		return False
+	else:
+		for _instruct in _instructions:
+			if _instruct.get_name() in dex_conditional_memonics:
+				return True
+		return False
+
+def _invoke_method(_method):
+	_instructions = _get_method_instructions(_method)
+	if len(_instructions) <= 1 :
+		return False
+	else:
+		for _instruct in _instructions:
+			if _instruct in dex_method_call_memonics:
+				return True
+		return False
+
 def _instantiates_allow_all_hostname_verifier(_method):
 	if not _method.get_class_name() == "Lorg/apache/http/conn/ssl/SSLSocketFactory;":
 		_instructions = _get_method_instructions(_method)
@@ -122,13 +146,16 @@ def _check_trust_manager(_method, _vm, _vmx):
 	_trustmanager_interfaces = ['Ljavax/net/ssl/TrustManager;', 'Ljavax/net/ssl/X509TrustManager;']
 	_custom_trust_manager = []
 	_insecure_socket_factory = []
-	
+
 	if _has_signature(_method, [_check_server_trusted]):
 		_class = _vm.get_class(_method.get_class_name())
 		if _class_implements_interface(_class, _trustmanager_interfaces):
 			_java_b64, _xref = _get_javab64_xref(_class, _vmx)
 			_empty = _returns_true(_method) or _returns_void(_method)
-			_custom_trust_manager.append({'class' : _class, 'xref' : _xref, 'java_b64' : _java_b64, 'empty' : _empty})
+			_verification = False
+			if not _empty:
+				_verification = _contains_conditional_syntax(_method) or _invoke_method(_method)
+			_custom_trust_manager.append({'class' : _class, 'xref' : _xref, 'java_b64' : _java_b64, 'empty' : _empty, 'verification' : _verification})
 	if _instantiates_get_insecure_socket_factory(_method):
 		_class = _vm.get_class(_method.get_class_name())
 		_java_b64, _xref = _get_javab64_xref(_class, _vmx)
@@ -152,7 +179,10 @@ def _check_hostname_verifier(_method, _vm, _vmx):
 		if _class_implements_interface(_class, _verifier_interfaces) or _class_extends_class(_class, _verifier_classes):
 			_java_b64, _xref = _get_javab64_xref(_class, _vmx)
 			_empty = _returns_true(_method) or _returns_void(_method)
-			_custom_hostname_verifier.append({'class' : _class, 'xref' : _xref, 'java_b64' : _java_b64, 'empty' : _empty})
+			_verification = False
+			if not _empty:
+				_verification = _contains_conditional_syntax(_method) or _invoke_method(_method)
+			_custom_hostname_verifier.append({'class' : _class, 'xref' : _xref, 'java_b64' : _java_b64, 'empty' : _empty, 'verification' : _verification})
 	if _instantiates_allow_all_hostname_verifier(_method):
 		_class = _vm.get_class(_method.get_class_name())
 		_java_b64, _xref = _get_javab64_xref(_class, _vmx)
@@ -170,8 +200,11 @@ def _check_ssl_error(_method, _vm, _vmx):
 		if _class_extends_class(_class, _webviewclient_classes) or True:
 			_java_b64, _xref = _get_javab64_xref(_class, _vmx)
 			_empty = _returns_true(_method) or _returns_void(_method)
-			_custom_on_received_ssl_error.append({'class' : _class, 'xref' : _xref, 'java_b64' : _java_b64, 'empty' : _empty})
-	
+			_verification = False
+			if not _empty:
+				_verification = _contains_conditional_syntax(_method) or _invoke_method(_method)
+			_custom_on_received_ssl_error.append({'class' : _class, 'xref' : _xref, 'java_b64' : _java_b64, 'empty' : _empty, 'verification' : _verification})
+
 	return _custom_on_received_ssl_error
 
 def _check_all(_vm, _vmx, _gx):

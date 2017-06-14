@@ -108,7 +108,7 @@ def _instantiates_get_insecure_socket_factory(_method):
 
 def _get_javab64_xref(_class, _vmx):
 	_java_b64 = base64.b64encode(_get_java_code(_class, _vmx))
-	_xref = None
+	_xref = []
 	try:
 		_xref = _class.XREFfrom
 		if _xref:

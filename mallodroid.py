@@ -248,8 +248,10 @@ def _print_result(_result, _java=True):
 		for _tm in _result['trustmanager']:
 			_class_name = _tm['class'].get_name()
 			print "\tCustom TrustManager is implemented in class {:s}".format(_translate_class_name(_class_name))
-			if _tm['empty']:
+			if len(_tm['xref']) and _tm['empty']:
 				print "\tImplements naive certificate check. This TrustManager breaks certificate validation!"
+			elif len(_tm['xref']) and _tm['verification'] == False:
+				print "\t Implements certificate check but does not do any verification of certificate. This implementation breaks certificate validation!"
 			for _ref in _tm['xref']:
 				print "\t\tReferenced in method {:s}->{:s}".format(_translate_class_name(_ref.get_class_name()), _ref.get_name())
 			if _java:
@@ -278,9 +280,11 @@ def _print_result(_result, _java=True):
 		for _hv in _result['customhostnameverifier']:
 			_class_name = _hv['class'].get_name()
 			print "\tCustom HostnameVerifiers is implemented in class {:s}".format(_translate_class_name(_class_name))
-			if _hv['empty']:
+			if len(_hv['xref']) and _hv['empty']:
 				print "\tImplements naive hostname verification. This HostnameVerifier breaks certificate validation!"
-			for _ref in _tm['xref']:
+			elif len(_hv['xref']) and _hv['verification'] == False:
+				print "\t Implements hostname verification but does not do any verification of hostname. This implementation breaks certificate validation!"
+			for _ref in _hv['xref']:
 				print "\t\tReferenced in method {:s}->{:s}".format(_translate_class_name(_ref.get_class_name()), _ref.get_name())
 			if _java:
 				print "\t\tJavaSource code:"
@@ -330,11 +334,21 @@ def _xml_result(_a, _result):
 		_class_name = _translate_class_name(_tm['class'].get_name())
 		_t = SubElement(_tms, 'trustmanager')
 		_t.set('class', _class_name)
-		if _tm['empty']:
-			_t.set('broken', 'True')
+		#check whether this custom trustmanger is referenced somewhere or not
+		if len(_tm['xref']):
+			print "inside if block"
+			if _tm['empty']:
+				_t.set('broken', 'True')
+				_t.set('cause', 'Empty Definition')
+			elif _tm['verification'] == False:
+				_t.set('broken', 'True')
+				_t.set('cause', 'No Verification')
+			else:
+				_t.set('broken', 'Maybe')
+				_t.set('cause', 'Unknown')
 		else:
-			_t.set('broken', 'Maybe')
-		
+			_t.set('broken', 'False')
+
 		for _r in _tm['xref']:
 			_rs = SubElement(_t, 'xref')
 			_rs.set('class', _translate_class_name(_r.get_class_name()))
@@ -354,11 +368,20 @@ def _xml_result(_a, _result):
 		_class_name = _translate_class_name(_hv['class'].get_name())
 		_h = SubElement(_hvs, 'hostnameverifier')
 		_h.set('class', _class_name)
-		if _hv['empty']:
-			_h.set('broken', 'True')
+		#check whether this custom trustmanger is referenced somewhere or not
+		if len(_hv['xref']):
+			if _hv['empty']:
+				_h.set('broken', 'True')
+				_h.set('cause', 'Empty Definition')
+			elif _hv['verification']:
+				_h.set('broken', 'True')
+				_h.set('cause', 'No Verification')
+			else:
+				_h.set('broken', 'Maybe')
+				_h.set('cause', 'Unknown')
 		else:
-			_h.set('broken', 'Maybe')
-		
+			_h.set('broken', 'False')
+
 		for _ref in _hv['xref']:
 			_hs = SubElement(_h, 'xref')
 			_hs.set('class', _translate_class_name(_ref.get_class_name()))
@@ -377,10 +400,18 @@ def _xml_result(_a, _result):
 		_class_name = _translate_class_name(_se['class'].get_name())
 		_s = SubElement(_orse, 'sslerror')
 		_s.set('class', _class_name)
-		if _se['empty']:
-			_s.set('broken', 'True')
+		if len(_se['xref']):
+			if _se['empty']:
+				_s.set('broken', 'True')
+				_s.set('cause', 'Empty Definition')
+			elif _se['verification'] == False:
+				_s.set('broken', 'True')
+				_s.set('cause', 'No Verification')
+			else:
+				_s.set('broken', 'Maybe')
+				_s.set('cause', 'Unknown')
 		else:
-			_s.set('broken', 'Maybe')
+			_s.set('broken', 'False')
 
 		for _ref in _se['xref']:
 			_ss = SubElement(_s, 'xref')

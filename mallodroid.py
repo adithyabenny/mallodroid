@@ -472,8 +472,7 @@ def _parseargs():
 def main():
 
 	_args = _parseargs()
-	
-	_a = apk.APK(_args.file)
+	_a = apk.APK(_args.file, raw=False, mode="r", )
 	print("Analyse file: {:s}".format(_args.file))
 	print("Package name: {:s}".format(_a.get_package()))
 	

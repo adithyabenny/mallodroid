@@ -298,6 +298,21 @@ def _print_result(_result, _java=True):
 		if _java:
 			print "\t\tJavaSource code:"
 			print "{:s}".format(base64.b64decode(_aa['java_b64']))
+	if len(_result['onreceivedsslerror']):
+		print "App instantiates {:d} onreceivedsslerror".format(len(_result['onreceivedsslerror']))
+		for _se in _result['onreceivedsslerror']:
+			_class_name = _translate_class_name(_se['class'].get_name())
+			print "\tonReceivedSslError is implemented in class {:s}".format(_class_name)
+			if len(_se['xref']) and _se['empty']:
+				print "\tImplements naive onReceivedSslerror implementation."
+				print "This implementation proceeds SSL connection without further checking untrusted certificate"
+			elif len(_se['xref']) and _se['verification'] == False:
+				print "\t Implements onReceivedSslerror but does not do any verification of Certificate. This implementation breaks certificate validation!"
+			for _ref in _se['xref']:
+				print "\t\tReference in method {:s}->{:s}".format(_translate_class_name(_ref.get_class_name()), _ref.get_name())
+			if _java:
+				print "\t\tJavaSource code:"
+				print "{:s}".format(base64.decode(_se['java_b64']))
 
 def _xml_result(_a, _result):
 	from xml.etree.ElementTree import Element, SubElement, tostring, dump
